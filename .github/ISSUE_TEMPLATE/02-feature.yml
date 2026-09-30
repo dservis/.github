@@ -1,0 +1,120 @@
+name: ✨ Feature
+description: Uma capacidade nova ou uma mudança de comportamento com valor para o usuário
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Descreva o **problema** antes da solução. Uma feature que começa pela tela
+        ou pelo endpoint costuma esconder a pergunta que realmente importa:
+        quem precisa disso e o que muda se não for feito.
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema
+      description: |
+        Qual dor existe hoje? Como o usuário resolve isso atualmente, e por que
+        esse contorno não é suficiente?
+      placeholder: |
+        A equipe precisa conferir manualmente, planilha por planilha, quais
+        pedidos estão atrasados. Leva ~40 min por dia e já deixou passar dois
+        atrasos de entrega neste trimestre.
+    validations:
+      required: true
+
+  - type: textarea
+    id: historia
+    attributes:
+      label: História de usuário
+      description: Quem, o quê, para quê. Um único papel por issue.
+      value: |
+        Como <papel>,
+        quero <capacidade>,
+        para <resultado de negócio>.
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Critérios de aceite
+      description: |
+        Verificáveis e binários. Cada um vira pelo menos um teste automatizado.
+        Se não dá para dizer "passou" ou "não passou", não é critério de aceite.
+      value: |
+        - [ ] Dado <contexto>, quando <ação>, então <resultado observável>
+        - [ ] Dado <contexto>, quando <ação inválida>, então <erro esperado>
+        - [ ] 
+    validations:
+      required: true
+
+  - type: textarea
+    id: fora-de-escopo
+    attributes:
+      label: Fora de escopo
+      description: O que esta issue explicitamente **não** entrega. Evita que o PR cresça sem controle.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+      description: |
+        O que mais foi pensado e por que foi descartado. Inclua "não fazer nada"
+        quando for uma opção defensável.
+
+  - type: dropdown
+    id: impacto-contrato
+    attributes:
+      label: Impacto em contrato
+      description: Muda algo que outro sistema, app ou cliente já consome?
+      multiple: true
+      options:
+        - "Nenhum — mudança interna"
+        - "Contrato de API (request/response)"
+        - "Schema de banco de dados"
+        - "Permissões / autorização"
+        - "Interface do app mobile"
+        - "Integração com terceiro"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: É breaking change?
+      description: Algum consumidor existente precisa mudar para continuar funcionando?
+      options:
+        - "Não"
+        - "Sim — exige migração coordenada"
+        - "A definir na análise técnica"
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrica
+    attributes:
+      label: Como saberemos que deu certo
+      description: |
+        A métrica ou observação que confirma o valor entregue, medida depois do deploy.
+      placeholder: Conferência diária de pedidos atrasados cai de ~40 min para menos de 5 min.
+
+  - type: textarea
+    id: dependencias
+    attributes:
+      label: Dependências
+      description: Issues, PRs ou decisões externas que precisam existir antes. Use `#numero` ou `owner/repo#numero`.
+
+  - type: checkboxes
+    id: confirmacoes
+    attributes:
+      label: Confirmações
+      options:
+        - label: Pesquisei e não encontrei issue equivalente
+          required: true
+        - label: Os critérios de aceite são verificáveis por teste automatizado
+          required: true

@@ -1,0 +1,148 @@
+name: ⚙️ Config
+description: Mudança de configuração, infraestrutura, acesso ou ambiente — sem alteração de código de aplicação
+title: "[Config]: "
+labels: ["config", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use para mudanças que alteram o **ambiente**, não o código: variáveis,
+        segredos, permissões, CI/CD, DNS, banco, feature flags.
+
+        Mudança de configuração é a causa mais comum de incidente em produção
+        justamente por não passar por revisão. Esta issue é essa revisão.
+
+        **Nunca cole o valor de um segredo aqui.** Informe apenas o nome da chave.
+
+  - type: textarea
+    id: mudanca
+    attributes:
+      label: O que muda
+      description: Uma frase objetiva.
+      placeholder: Aumentar o limite de conexões do banco de dados de 100 para 200 em produção.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: categoria
+    attributes:
+      label: Categoria
+      options:
+        - "Variável de ambiente / appsettings"
+        - "Segredo / credencial / certificado"
+        - "Permissão / acesso / IAM"
+        - "Banco de dados (parâmetro, índice, schema)"
+        - "CI/CD / GitHub Actions / rulesets"
+        - "Rede / DNS / firewall / proxy"
+        - "Feature flag"
+        - "Recurso de infraestrutura (VM, container, storage)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ambientes
+    attributes:
+      label: Ambientes afetados
+      multiple: true
+      options:
+        - Produção
+        - Homologação
+        - Desenvolvimento
+    validations:
+      required: true
+
+  - type: textarea
+    id: estado-atual
+    attributes:
+      label: Estado atual
+      description: Valor, permissão ou configuração vigente hoje. Use o nome da chave, nunca o valor de um segredo.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: estado-desejado
+    attributes:
+      label: Estado desejado
+      description: Como deve ficar depois da mudança.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: justificativa
+    attributes:
+      label: Justificativa
+      description: |
+        Por que essa mudança é necessária agora. Se veio de um incidente ou de uma
+        issue, referencie com `#numero`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impacto
+    attributes:
+      label: Raio de impacto
+      description: |
+        O que para de funcionar se isso der errado? Há indisponibilidade prevista?
+        Quais serviços, integrações ou clientes dependem dessa configuração?
+    validations:
+      required: true
+
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Plano de rollback
+      description: |
+        Como desfazer, em quanto tempo, e quem consegue executar.
+        Se não houver rollback possível, diga isso explicitamente e justifique.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validacao
+    attributes:
+      label: Como validar depois de aplicar
+      description: Comando, endpoint, dashboard ou log que comprova que a mudança surtiu efeito.
+      placeholder: |
+        curl -s https://api.exemplo.com/health | jq .database.pool
+        Painel de monitoramento > Banco de dados > Conexões (esperado: teto em 200)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: janela
+    attributes:
+      label: Janela de aplicação
+      options:
+        - "Pode ser aplicada a qualquer momento"
+        - "Fora do horário comercial"
+        - "Janela de manutenção agendada"
+        - "Emergencial — aplicar imediatamente"
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risco
+    attributes:
+      label: Risco
+      options:
+        - "Baixo — reversível em minutos, sem indisponibilidade"
+        - "Médio — reversível, com degradação temporária"
+        - "Alto — indisponibilidade prevista ou rollback lento"
+        - "Crítico — irreversível ou com risco de perda de dados"
+      default: 0
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmacoes
+    attributes:
+      label: Confirmações
+      options:
+        - label: Nenhum valor de segredo, token ou senha foi colado nesta issue
+          required: true
+        - label: A mudança foi validada antes em homologação, ou justifiquei por que não foi
+          required: true
+        - label: O plano de rollback foi testado ou é comprovadamente trivial

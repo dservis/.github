@@ -1,0 +1,136 @@
+name: 🐛 Bug
+description: Algo que já existe está se comportando de forma incorreta
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de abrir, confirme que já existiu um comportamento correto.
+        Se a funcionalidade nunca existiu, abra uma **Feature** em vez de um Bug.
+
+        Nunca cole segredos, tokens, certificados ou dados de cliente nesta issue.
+
+  - type: input
+    id: resumo
+    attributes:
+      label: Resumo
+      description: Uma frase objetiva. O título da issue deve poder ser lido sem abrir o corpo.
+      placeholder: Salvar um pedido duplica o registro quando o botão é clicado duas vezes seguidas
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Passos para reproduzir
+      description: Numerados, a partir de um estado conhecido. Quem ler deve conseguir repetir sem perguntar nada.
+      placeholder: |
+        1. Autenticar como usuário com permissão de edição
+        2. Abrir o pedido 123
+        3. Clicar em "Salvar" duas vezes seguidas
+        4. Consultar GET /pedidos/123
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Comportamento esperado
+      description: O que deveria acontecer, e por quê (regra de negócio, contrato da API, documentação).
+    validations:
+      required: true
+
+  - type: textarea
+    id: obtido
+    attributes:
+      label: Comportamento obtido
+      description: O que acontece de fato. Inclua o status HTTP e o corpo da resposta quando for API.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severidade
+    attributes:
+      label: Severidade
+      description: |
+        Impacto no negócio, não esforço de correção.
+        S1 e S2 exigem aviso imediato ao responsável — não espere a triagem.
+      options:
+        - "S1 — Produção parada ou perda/corrupção de dados"
+        - "S2 — Função crítica indisponível, sem contorno"
+        - "S3 — Função degradada, existe contorno viável"
+        - "S4 — Incômodo, cosmético ou de baixo alcance"
+      default: 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequencia
+    attributes:
+      label: Frequência
+      options:
+        - "Sempre (100%)"
+        - "Frequente (mais da metade das tentativas)"
+        - "Intermitente (minoria das tentativas)"
+        - "Ocorreu uma única vez"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ambiente
+    attributes:
+      label: Ambiente
+      multiple: true
+      options:
+        - Produção
+        - Homologação
+        - Desenvolvimento local
+    validations:
+      required: true
+
+  - type: input
+    id: versao
+    attributes:
+      label: Versão / commit
+      description: Tag, número de build ou SHA do commit em que o problema foi observado.
+      placeholder: v1.4.0 · 3f2a9c1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regressao
+    attributes:
+      label: É uma regressão?
+      description: Funcionava antes e parou de funcionar?
+      options:
+        - "Não sei"
+        - "Sim — funcionava em uma versão anterior"
+        - "Não — nunca funcionou nesta configuração"
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Logs, stack trace ou resposta da API
+      description: Cole o trecho relevante. Remova tokens, senhas e dados pessoais antes.
+      render: text
+
+  - type: textarea
+    id: impacto
+    attributes:
+      label: Quem é afetado
+      description: Quantos clientes, quais empresas, desde quando. Isso define a prioridade.
+
+  - type: checkboxes
+    id: confirmacoes
+    attributes:
+      label: Confirmações
+      options:
+        - label: Pesquisei e não encontrei issue aberta ou fechada para este problema
+          required: true
+        - label: Reproduzi em ambiente controlado, não apenas em relato de terceiros
+        - label: Removi segredos, tokens e dados de cliente do conteúdo acima
+          required: true
