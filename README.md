@@ -7,6 +7,9 @@ automaticamente por todo repositório da organização que não definir o seu pr
 
 ```
 .github/
+├── workflows/
+│   ├── dotnet-ci.yml           # CI reutilizável para soluções .NET
+│   └── flutter-ci.yml          # CI reutilizável para apps Flutter
 ├── PULL_REQUEST_TEMPLATE.md    # corpo padrão de todo pull request
 └── ISSUE_TEMPLATE/
     ├── config.yml              # configuração do seletor (nome reservado)
@@ -23,6 +26,35 @@ automaticamente por todo repositório da organização que não definir o seu pr
   `config.yml` próprio, nenhum arquivo daqui é usado naquele repositório.
 - Este repositório precisa permanecer **público** para que a herança funcione,
   mesmo que os repositórios que a consomem sejam privados.
+
+## Workflows reutilizáveis
+
+Um repositório consome o CI da organização em poucas linhas:
+
+```yaml
+jobs:
+  ci:
+    uses: dservis/.github/.github/workflows/dotnet-ci.yml@v1
+    permissions:
+      contents: read
+```
+
+| Workflow | O que faz | Inputs principais |
+|---|---|---|
+| `dotnet-ci.yml` | restore, build com `ContinuousIntegrationBuild`, testes (TRX publicado), falha em pacote NuGet vulnerável | `working-directory`, `solution`, `test-filter`, `fail-on-vulnerable` |
+| `flutter-ci.yml` | `dart format`, `flutter analyze --fatal-infos`, testes com cobertura, APK de release opcional | `build-android`, `api-base-url`, `channel`, `flutter-version`, `check-format` |
+
+**Versionamento.** Consuma sempre por tag (`@v1`), nunca por `@main`: uma
+mudança aqui quebraria todos os repositórios de uma vez. Mudança compatível
+move a tag `v1`; mudança incompatível cria `v2`.
+
+**Acesso.** Este repositório é público, então qualquer repositório da
+organização (inclusive privado) pode chamar os workflows. Se ele virar privado,
+habilite Settings → Actions → General → *Access* → "Accessible from repositories
+in the organization".
+
+**Permissões.** Os workflows pedem só `contents: read`. O chamador precisa
+declarar `permissions` no mínimo igual, como no exemplo acima.
 
 ## Labels
 

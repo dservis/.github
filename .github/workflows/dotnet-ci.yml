@@ -1,0 +1,100 @@
+name: .NET CI (reutilizável)
+
+# Uso no repositório consumidor:
+#
+#   jobs:
+#     ci:
+#       uses: dservis/.github/.github/workflows/dotnet-ci.yml@v1
+#       permissions:
+#         contents: read
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Pasta que contém a solução e o global.json
+        type: string
+        default: "."
+      global-json-file:
+        description: Caminho do global.json, relativo a working-directory
+        type: string
+        default: global.json
+      solution:
+        description: Arquivo .sln/.slnx. Vazio = o único da pasta
+        type: string
+        default: ""
+      configuration:
+        type: string
+        default: Release
+      test-filter:
+        description: "Filtro do dotnet test. Ex.: FullyQualifiedName!~WebApi para pular integração"
+        type: string
+        default: ""
+      fail-on-vulnerable:
+        description: Falha o job se houver pacote NuGet com vulnerabilidade conhecida
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_UI_LANGUAGE: en
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: ${{ inputs.working-directory }}/${{ inputs.global-json-file }}
+
+      - name: Restore
+        run: dotnet restore ${{ inputs.solution }}
+
+      # ContinuousIntegrationBuild liga TreatWarningsAsErrors (Directory.Build.props
+      # do template) e torna o build determinístico.
+      - name: Build
+        run: >
+          dotnet build ${{ inputs.solution }}
+          --no-restore
+          -c ${{ inputs.configuration }}
+          -p:ContinuousIntegrationBuild=true
+
+      # Testcontainers usa o Docker que já vem no runner.
+      - name: Testes
+        run: >
+          dotnet test ${{ inputs.solution }}
+          --no-build
+          -c ${{ inputs.configuration }}
+          --logger "trx;LogFileName=resultado.trx"
+          --results-directory ./TestResults
+          ${{ inputs.test-filter != '' && format('--filter "{0}"', inputs.test-filter) || '' }}
+
+      # `dotnet list package --vulnerable` sempre sai com código 0, mesmo
+      # achando vulnerabilidade: é preciso ler a saída.
+      - name: Pacotes vulneráveis
+        if: inputs.fail-on-vulnerable
+        run: |
+          output="$(dotnet list ${{ inputs.solution }} package --vulnerable --include-transitive 2>&1)"
+          echo "$output"
+          if echo "$output" | grep -q "has the following vulnerable packages"; then
+            echo "::error::Há pacotes NuGet com vulnerabilidade conhecida. Veja a saída acima."
+            exit 1
+          fi
+
+      - name: Publicar resultados dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-results
+          path: ${{ inputs.working-directory }}/TestResults/*.trx
+          if-no-files-found: ignore
+          retention-days: 14
