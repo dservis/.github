@@ -6,6 +6,8 @@ automaticamente por todo repositório da organização que não definir o seu pr
 ## Conteúdo
 
 ```
+profile/
+└── README.md                   # apresentação exibida em github.com/dservis
 .github/
 ├── workflows/
 │   ├── dotnet-ci.yml           # CI reutilizável para soluções .NET
