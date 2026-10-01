@@ -73,13 +73,15 @@ jobs:
           -c ${{ inputs.configuration }}
           -p:ContinuousIntegrationBuild=true
 
-      # Testcontainers usa o Docker que já vem no runner.
+      # Testcontainers usa o Docker que já vem no runner. O logger trx sem
+      # LogFileName gera um arquivo por projeto de teste; um nome fixo faria
+      # cada projeto sobrescrever o anterior.
       - name: Testes
         run: >
           dotnet test ${{ inputs.solution }}
           --no-build
           -c ${{ inputs.configuration }}
-          --logger "trx;LogFileName=resultado.trx"
+          --logger trx
           --results-directory ./TestResults
           ${{ inputs.test-filter != '' && format('--filter "{0}"', inputs.test-filter) || '' }}
 
