@@ -4,20 +4,32 @@ name: Flutter CI (reutilizável)
 #
 #   jobs:
 #     ci:
-#       uses: dservis/.github/.github/workflows/flutter-ci.yml@v1
+#       uses: dservis/.github/.github/workflows/flutter-ci.yml@main
 #       permissions:
 #         contents: read
 #       with:
 #         build-android: true
 #         api-base-url: ${{ vars.API_BASE_URL }}
+#
+# Monorepo com vários pacotes/apps:
+#
+#       with:
+#         working-directories: '["package/model", "project/caixa"]'
+#
+# A verificação a exigir nos rulesets é sempre "ci / verificacao",
+# qualquer que seja a quantidade de pastas.
 
 on:
   workflow_call:
     inputs:
       working-directory:
-        description: Pasta que contém o pubspec.yaml
+        description: Pasta que contém o pubspec.yaml (repositório de um pacote só)
         type: string
         default: "."
+      working-directories:
+        description: 'Lista JSON de pastas para monorepo. Ex.: ["package/model", "project/app"]. Se informada, substitui working-directory na análise e nos testes'
+        type: string
+        default: ""
       channel:
         description: Canal do Flutter (stable, beta)
         type: string
@@ -27,7 +39,11 @@ on:
         type: string
         default: ""
       fatal-infos:
-        description: flutter analyze falha até em apontamentos informativos
+        description: flutter analyze falha em apontamentos informativos
+        type: boolean
+        default: true
+      fatal-warnings:
+        description: flutter analyze falha em avisos
         type: boolean
         default: true
       check-format:
@@ -38,7 +54,7 @@ on:
         type: boolean
         default: true
       build-android:
-        description: Gera o APK de release depois de análise e testes
+        description: Gera o APK de release depois de análise e testes (usa working-directory)
         type: boolean
         default: false
       api-base-url:
@@ -51,11 +67,16 @@ permissions:
 
 jobs:
   analise-e-testes:
+    name: analise-e-testes (${{ matrix.pasta }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pasta: ${{ fromJSON(inputs.working-directories != '' && inputs.working-directories || format('["{0}"]', inputs.working-directory)) }}
     defaults:
       run:
-        working-directory: ${{ inputs.working-directory }}
+        working-directory: ${{ matrix.pasta }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,20 +93,47 @@ jobs:
         if: inputs.check-format
         run: dart format --output=none --set-exit-if-changed .
 
+      # flutter analyze já trata info e warning como fatais por padrão:
+      # desligar exige a flag negativa explícita.
       - name: Análise estática
-        run: flutter analyze ${{ inputs.fatal-infos && '--fatal-infos' || '' }}
+        run: >
+          flutter analyze
+          ${{ inputs.fatal-infos && '--fatal-infos' || '--no-fatal-infos' }}
+          ${{ inputs.fatal-warnings && '--fatal-warnings' || '--no-fatal-warnings' }}
 
       - name: Testes
-        run: flutter test ${{ inputs.coverage && '--coverage' || '' }}
+        id: testes
+        run: |
+          if [ ! -d test ]; then
+            echo "::notice::Sem pasta test em ${{ matrix.pasta }}; etapa ignorada."
+            exit 0
+          fi
+          flutter test ${{ inputs.coverage && '--coverage' || '' }}
+
+      - name: Nome do artefato
+        id: artefato
+        if: always() && inputs.coverage
+        run: echo "nome=flutter-coverage-$(echo '${{ matrix.pasta }}' | tr '/.' '--')" >> "$GITHUB_OUTPUT"
 
       - name: Publicar cobertura
         if: always() && inputs.coverage
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-coverage
-          path: ${{ inputs.working-directory }}/coverage/lcov.info
+          name: ${{ steps.artefato.outputs.nome }}
+          path: ${{ matrix.pasta }}/coverage/lcov.info
           if-no-files-found: ignore
           retention-days: 14
+
+  # Verificação única para os rulesets: consolida todas as pastas da matriz.
+  verificacao:
+    if: always()
+    needs: analise-e-testes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resultado da análise e dos testes
+        run: |
+          echo "Resultado: ${{ needs.analise-e-testes.result }}"
+          test "${{ needs.analise-e-testes.result }}" = "success"
 
   build-android:
     if: inputs.build-android
