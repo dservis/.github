@@ -16,9 +16,13 @@ on:
         type: string
         default: "."
       global-json-file:
-        description: Caminho do global.json, relativo a working-directory
+        description: Caminho do global.json, relativo a working-directory. Ignorado se dotnet-version for informado
         type: string
         default: global.json
+      dotnet-version:
+        description: "Versão do SDK (ex.: 10.0.x) para repositórios sem global.json"
+        type: string
+        default: ""
       solution:
         description: Arquivo .sln/.slnx. Vazio = o único da pasta
         type: string
@@ -54,7 +58,8 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          global-json-file: ${{ inputs.working-directory }}/${{ inputs.global-json-file }}
+          dotnet-version: ${{ inputs.dotnet-version }}
+          global-json-file: ${{ inputs.dotnet-version == '' && format('{0}/{1}', inputs.working-directory, inputs.global-json-file) || '' }}
 
       - name: Restore
         run: dotnet restore ${{ inputs.solution }}
