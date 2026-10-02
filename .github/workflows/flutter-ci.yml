@@ -16,6 +16,13 @@ name: Flutter CI (reutilizável)
 #       with:
 #         working-directories: '["package/model", "project/caixa"]'
 #
+# Dependências em repositórios privados da organização (pubspec com git:):
+#
+#       with:
+#         packages-app-id: ${{ vars.PACKAGES_APP_ID }}
+#       secrets:
+#         packages-app-private-key: ${{ secrets.PACKAGES_APP_PRIVATE_KEY }}
+#
 # A verificação a exigir nos rulesets é sempre "ci / verificacao",
 # qualquer que seja a quantidade de pastas.
 
@@ -61,6 +68,17 @@ on:
         description: Valor de --dart-define=API_BASE_URL no build Android
         type: string
         default: ""
+      packages-app-id:
+        description: ID da GitHub App com leitura dos repositórios de pacotes privados
+        type: string
+        default: ""
+    secrets:
+      packages-app-private-key:
+        description: Chave privada da GitHub App de pacotes (recomendado)
+        required: false
+      packages-token:
+        description: Alternativa à App - token com leitura dos repositórios de pacotes
+        required: false
 
 permissions:
   contents: read
@@ -70,6 +88,9 @@ jobs:
     name: analise-e-testes (${{ matrix.pasta }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      TEM_APP: ${{ inputs.packages-app-id != '' && secrets.packages-app-private-key != '' }}
+      TEM_TOKEN: ${{ secrets.packages-token != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -85,6 +106,27 @@ jobs:
           channel: ${{ inputs.channel }}
           flutter-version: ${{ inputs.flutter-version }}
           cache: true
+
+      # O GITHUB_TOKEN só lê o próprio repositório. Para pubspec com
+      # dependência git em outro repositório privado da organização, gera um
+      # token de leitura e faz o git usá-lo nas URLs da organização.
+      - name: Token de leitura dos pacotes privados
+        id: token-app
+        if: env.TEM_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ inputs.packages-app-id }}
+          private-key: ${{ secrets.packages-app-private-key }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Acesso aos pacotes privados
+        if: env.TEM_APP == 'true' || env.TEM_TOKEN == 'true'
+        env:
+          TOKEN: ${{ steps.token-app.outputs.token || secrets.packages-token }}
+        run: >
+          git config --global
+          url."https://x-access-token:${TOKEN}@github.com/${{ github.repository_owner }}/".insteadOf
+          "https://github.com/${{ github.repository_owner }}/"
 
       - name: Dependências
         run: flutter pub get
@@ -140,6 +182,9 @@ jobs:
     needs: analise-e-testes
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      TEM_APP: ${{ inputs.packages-app-id != '' && secrets.packages-app-private-key != '' }}
+      TEM_TOKEN: ${{ secrets.packages-token != '' }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -157,7 +202,29 @@ jobs:
           flutter-version: ${{ inputs.flutter-version }}
           cache: true
 
-      - run: flutter pub get
+      # O GITHUB_TOKEN só lê o próprio repositório. Para pubspec com
+      # dependência git em outro repositório privado da organização, gera um
+      # token de leitura e faz o git usá-lo nas URLs da organização.
+      - name: Token de leitura dos pacotes privados
+        id: token-app
+        if: env.TEM_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ inputs.packages-app-id }}
+          private-key: ${{ secrets.packages-app-private-key }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Acesso aos pacotes privados
+        if: env.TEM_APP == 'true' || env.TEM_TOKEN == 'true'
+        env:
+          TOKEN: ${{ steps.token-app.outputs.token || secrets.packages-token }}
+        run: >
+          git config --global
+          url."https://x-access-token:${TOKEN}@github.com/${{ github.repository_owner }}/".insteadOf
+          "https://github.com/${{ github.repository_owner }}/"
+
+      - name: Dependências
+        run: flutter pub get
 
       - name: APK de release
         run: >
