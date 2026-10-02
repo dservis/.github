@@ -23,7 +23,7 @@ name: Flutter CI (reutilizável)
 #       secrets:
 #         packages-app-private-key: ${{ secrets.PACKAGES_APP_PRIVATE_KEY }}
 #
-# A verificação a exigir nos rulesets é sempre "ci / verificacao",
+# A verificação a exigir nos rulesets é sempre "ci / verify",
 # qualquer que seja a quantidade de pastas.
 
 on:
@@ -84,8 +84,8 @@ permissions:
   contents: read
 
 jobs:
-  analise-e-testes:
-    name: analise-e-testes (${{ matrix.pasta }})
+  analyze-and-test:
+    name: analyze-and-test (${{ matrix.pasta }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -110,7 +110,7 @@ jobs:
       # O GITHUB_TOKEN só lê o próprio repositório. Para pubspec com
       # dependência git em outro repositório privado da organização, gera um
       # token de leitura e faz o git usá-lo nas URLs da organização.
-      - name: Token de leitura dos pacotes privados
+      - name: Private packages read token
         id: token-app
         if: env.TEM_APP == 'true'
         uses: actions/create-github-app-token@v2
@@ -119,7 +119,7 @@ jobs:
           private-key: ${{ secrets.packages-app-private-key }}
           owner: ${{ github.repository_owner }}
 
-      - name: Acesso aos pacotes privados
+      - name: Private packages access
         if: env.TEM_APP == 'true' || env.TEM_TOKEN == 'true'
         env:
           TOKEN: ${{ steps.token-app.outputs.token || secrets.packages-token }}
@@ -128,36 +128,36 @@ jobs:
           url."https://x-access-token:${TOKEN}@github.com/${{ github.repository_owner }}/".insteadOf
           "https://github.com/${{ github.repository_owner }}/"
 
-      - name: Dependências
+      - name: Dependencies
         run: flutter pub get
 
-      - name: Formatação
+      - name: Format
         if: inputs.check-format
         run: dart format --output=none --set-exit-if-changed .
 
       # flutter analyze já trata info e warning como fatais por padrão:
       # desligar exige a flag negativa explícita.
-      - name: Análise estática
+      - name: Static analysis
         run: >
           flutter analyze
           ${{ inputs.fatal-infos && '--fatal-infos' || '--no-fatal-infos' }}
           ${{ inputs.fatal-warnings && '--fatal-warnings' || '--no-fatal-warnings' }}
 
-      - name: Testes
+      - name: Tests
         id: testes
         run: |
           if [ ! -d test ]; then
-            echo "::notice::Sem pasta test em ${{ matrix.pasta }}; etapa ignorada."
+            echo "::notice::No test folder in ${{ matrix.pasta }}; step skipped."
             exit 0
           fi
           flutter test ${{ inputs.coverage && '--coverage' || '' }}
 
-      - name: Nome do artefato
+      - name: Artifact name
         id: artefato
         if: always() && inputs.coverage
         run: echo "nome=flutter-coverage-$(echo '${{ matrix.pasta }}' | tr '/.' '--')" >> "$GITHUB_OUTPUT"
 
-      - name: Publicar cobertura
+      - name: Upload coverage
         if: always() && inputs.coverage
         uses: actions/upload-artifact@v4
         with:
@@ -167,19 +167,19 @@ jobs:
           retention-days: 14
 
   # Verificação única para os rulesets: consolida todas as pastas da matriz.
-  verificacao:
+  verify:
     if: always()
-    needs: analise-e-testes
+    needs: analyze-and-test
     runs-on: ubuntu-latest
     steps:
-      - name: Resultado da análise e dos testes
+      - name: Analysis and test result
         run: |
-          echo "Resultado: ${{ needs.analise-e-testes.result }}"
-          test "${{ needs.analise-e-testes.result }}" = "success"
+          echo "Result: ${{ needs.analyze-and-test.result }}"
+          test "${{ needs.analyze-and-test.result }}" = "success"
 
   build-android:
     if: inputs.build-android
-    needs: analise-e-testes
+    needs: analyze-and-test
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -205,7 +205,7 @@ jobs:
       # O GITHUB_TOKEN só lê o próprio repositório. Para pubspec com
       # dependência git em outro repositório privado da organização, gera um
       # token de leitura e faz o git usá-lo nas URLs da organização.
-      - name: Token de leitura dos pacotes privados
+      - name: Private packages read token
         id: token-app
         if: env.TEM_APP == 'true'
         uses: actions/create-github-app-token@v2
@@ -214,7 +214,7 @@ jobs:
           private-key: ${{ secrets.packages-app-private-key }}
           owner: ${{ github.repository_owner }}
 
-      - name: Acesso aos pacotes privados
+      - name: Private packages access
         if: env.TEM_APP == 'true' || env.TEM_TOKEN == 'true'
         env:
           TOKEN: ${{ steps.token-app.outputs.token || secrets.packages-token }}
@@ -223,15 +223,15 @@ jobs:
           url."https://x-access-token:${TOKEN}@github.com/${{ github.repository_owner }}/".insteadOf
           "https://github.com/${{ github.repository_owner }}/"
 
-      - name: Dependências
+      - name: Dependencies
         run: flutter pub get
 
-      - name: APK de release
+      - name: Release APK
         run: >
           flutter build apk --release
           ${{ inputs.api-base-url != '' && format('--dart-define=API_BASE_URL={0}', inputs.api-base-url) || '' }}
 
-      - name: Publicar APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk

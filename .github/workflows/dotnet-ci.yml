@@ -43,10 +43,10 @@ permissions:
   contents: read
 
 jobs:
-  # O nome "verificacao" é o que os rulesets exigem ("ci / verificacao"),
+  # O nome "verify" é o que os rulesets exigem ("ci / verify"),
   # igual ao do Flutter, para um mesmo ruleset valer para as duas stacks.
   build-test:
-    name: verificacao
+    name: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -79,7 +79,7 @@ jobs:
       # Testcontainers usa o Docker que já vem no runner. O logger trx sem
       # LogFileName gera um arquivo por projeto de teste; um nome fixo faria
       # cada projeto sobrescrever o anterior.
-      - name: Testes
+      - name: Tests
         run: >
           dotnet test ${{ inputs.solution }}
           --no-build
@@ -90,17 +90,17 @@ jobs:
 
       # `dotnet list package --vulnerable` sempre sai com código 0, mesmo
       # achando vulnerabilidade: é preciso ler a saída.
-      - name: Pacotes vulneráveis
+      - name: Vulnerable packages
         if: inputs.fail-on-vulnerable
         run: |
           output="$(dotnet list ${{ inputs.solution }} package --vulnerable --include-transitive 2>&1)"
           echo "$output"
           if echo "$output" | grep -q "has the following vulnerable packages"; then
-            echo "::error::Há pacotes NuGet com vulnerabilidade conhecida. Veja a saída acima."
+            echo "::error::There are NuGet packages with known vulnerabilities. See the output above."
             exit 1
           fi
 
-      - name: Publicar resultados dos testes
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
